@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"UserManager/models"
 	"UserManager/services"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type UserController struct {
@@ -16,30 +18,75 @@ func NewUserController(userservice services.UserService) UserController {
 }
 
 func (uc *UserController) CreateUser(ctx *gin.Context) {
-	ctx.JSON(200, "")
+	var user models.User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	err := uc.UserService.CreateUser(&user)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusCreated, gin.H{"message": "success"})
 }
 
 func (uc *UserController) GetUser(ctx *gin.Context) {
-	ctx.JSON(200, "")
+	username := ctx.Param("name")
+	user, err := uc.UserService.GetUser(&username)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, user)
 }
 
 func (uc *UserController) GetAll(ctx *gin.Context) {
-	ctx.JSON(200, "")
+	users, err := uc.UserService.GetAll()
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, users)
 }
 
 func (uc *UserController) UpdateUser(ctx *gin.Context) {
-	ctx.JSON(200, "")
+	var user models.User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	err := uc.UserService.UpdateUser(&user)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 }
 
 func (uc *UserController) DeleteUser(ctx *gin.Context) {
-	ctx.JSON(200, "")
+	username := ctx.Param("name")
+	err := uc.UserService.DeleteUser(&username)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 }
 
-func (uc *UserController) registerUserRoutes(rg *gin.RouterGroup) {
+func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute := rg.Group("/user")
 	userroute.POST("/create", uc.CreateUser)
 	userroute.GET("/get/:name", uc.GetUser)
 	userroute.GET("/get", uc.GetAll)
 	userroute.PATCH("/update", uc.UpdateUser)
-	userroute.DELETE("/delete", uc.DeleteUser)
+	userroute.DELETE("/delete/:name", uc.DeleteUser)
 }
